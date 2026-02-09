@@ -1,2 +1,1 @@
-#
-#* Handles API endpoints
+from fastapi import APIRouter
