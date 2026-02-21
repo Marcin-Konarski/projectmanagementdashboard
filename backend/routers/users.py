@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from ..dependencies import SessionDep
 from ..db.utility import commit_or_409
-from ..core.security import get_password_hash, authenticate_user
+from ..core.security import get_password_hash, authenticate_user, get_user_and_session
 from ..schemas.user import UserRequest, UserAuthRequest, UserResponse, Token, TokenData
 from ..models.user import User
 
@@ -34,16 +34,21 @@ def auth_user(user: Annotated[UserAuthRequest, Body()], session: SessionDep) -> 
 # TODO: CONSIDER SENDING THIS JWT TOKEN IN HEADER OR EVEN IN COOKIE!!!
 
 # Login into service, validate credentials and return JWT access token
-@router.post("/login", status_code=status.HTTP_200_OK, tags=["users"])
-def login_user(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep) -> Any:
-    access_token = authenticate_user(session, form_data.username, form_data.password)
-    return Token(access_token=access_token, token_type="bearer")
-
-# @router.post("/login/", status_code=status.HTTP_200_OK, tags=["users"])
-# def login_user(user: Annotated[UserRequest, Body()], session: SessionDep) -> Any:
-#     access_token = authenticate_user(session, user.username, user.password.get_secret_value())
+# @router.post("/login", status_code=status.HTTP_200_OK, tags=["users"])
+# def login_user(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep) -> Any:
+#     access_token = authenticate_user(session, form_data.username, form_data.password)
 #     return Token(access_token=access_token, token_type="bearer")
 
+@router.post("/login/", status_code=status.HTTP_200_OK, tags=["users"])
+def login_user(user: Annotated[UserRequest, Body()], session: SessionDep) -> Any:
+    access_token = authenticate_user(session, user.username, user.password.get_secret_value())
+    return Token(access_token=access_token, token_type="bearer")
+
+# Get informations about currently logged in user
+@router.get("/me/", response_model=UserResponse, status_code=status.HTTP_200_OK, tags=["users"])
+def get_user_info(session_and_user: tuple[User, SessionDep] = Depends(get_user_and_session)) -> Any:
+    current_user, session = session_and_user
+    return current_user
 
 
 
@@ -55,11 +60,6 @@ def login_user(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], sessi
 #     raise NotImplementedError
 #     # return
 
-# # Get informations about currently logged in user
-# @router.get("/me/", response_model= UserResponse, status_code=status.HTTP_200_OK, tags=["users"])
-# def get_user_info() -> Any:
-#     raise NotImplementedError
-#     # return
 
 
 
