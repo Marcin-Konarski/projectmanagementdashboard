@@ -39,7 +39,7 @@ def auth_user(user: Annotated[UserAuthRequest, Body()], session: SessionDep) -> 
 #     access_token = authenticate_user(session, form_data.username, form_data.password)
 #     return Token(access_token=access_token, token_type="bearer")
 
-@router.post("/login/", status_code=status.HTTP_200_OK, tags=["users"])
+@router.post("/login/", response_model=Token, status_code=status.HTTP_200_OK, tags=["users"])
 def login_user(user: Annotated[UserRequest, Body()], session: SessionDep) -> Any:
     access_token = authenticate_user(session, user.username, user.password.get_secret_value())
     return Token(access_token=access_token, token_type="bearer")
