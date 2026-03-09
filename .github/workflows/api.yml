@@ -3,8 +3,10 @@ name: FastAPI App
 on:
   push:
     branches: [main]
+    paths: ['backend/**', '.github/workflows/fastapi.yml']
   pull_request:
     branches: [main]
+    paths: ['backend/**', '.github/workflows/fastapi.yml']
 
 jobs:
   lint:
