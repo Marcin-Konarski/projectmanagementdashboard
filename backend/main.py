@@ -10,7 +10,7 @@ from .routers import users, projects
 # @asynccontextmanager
 # async def lifespan(app: FastAPI):
 #     init_db()
-#     yield 
+#     yield
 
 # app = FastAPI(title=config.app_name, lifespan=lifespan)
 app = FastAPI(title=config.app_name)

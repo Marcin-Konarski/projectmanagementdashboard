@@ -17,6 +17,9 @@ class Project(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # users: list[User] = Relationship(back_populates="projects", link_model="ProjectUser")
-    users: list["ProjectUser"] = Relationship(back_populates="project", cascade_delete=True)
-    documents: list["Document"] = Relationship(back_populates="project", cascade_delete=True)
-
+    users: list["ProjectUser"] = Relationship(
+        back_populates="project", cascade_delete=True
+    )
+    documents: list["Document"] = Relationship(
+        back_populates="project", cascade_delete=True
+    )

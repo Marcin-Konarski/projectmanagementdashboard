@@ -18,9 +18,7 @@ class TokenData(BaseModel):
 class UserBase(BaseModel):
     username: Name
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 
 class UserRequest(UserBase):

@@ -25,9 +25,7 @@ class ProjectInfoResponse(BaseModel):
     owner_id: UUID
     created_at: datetime
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 
 class ProjectListItemResponse(BaseModel):
@@ -35,9 +33,7 @@ class ProjectListItemResponse(BaseModel):
     name: Name
     description: Annotated[str, Field(max_length=200)] | None
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 
 class ProjectDetailResponse(ProjectInfoResponse):
@@ -45,10 +41,5 @@ class ProjectDetailResponse(ProjectInfoResponse):
     documents: list[DocumentResponse]
 
 
-class ProjectsListResponse(BaseModel):
-    projects: list[ProjectListItemResponse]
-
-
 class MembersAddRequest(BaseModel):
     usernames: list[str]
-

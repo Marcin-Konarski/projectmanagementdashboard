@@ -4,50 +4,100 @@ from fastapi import APIRouter, Depends, Body, Path, status, HTTPException
 from sqlmodel import select
 
 from ..db.session import SessionDep
-from ..db.utility import commit_or_409, get_or_404, get_user_by_username
-from ..schemas.project import ProjectBase, ProjectUpdateRequest, ProjectInfoResponse, ProjectDetailResponse, ProjectsListResponse, MembersAddRequest
-from ..schemas.document import DocumentBase, DocumentRequest, DocumentResponse, DocumentListResponse
+from ..db.utility import commit_or_409, get_user_by_username
+from ..schemas.project import (
+    ProjectBase,
+    ProjectUpdateRequest,
+    ProjectInfoResponse,
+    ProjectDetailResponse,
+    ProjectListItemResponse,
+    MembersAddRequest,
+)
+from ..schemas.document import (
+    DocumentBase,
+    DocumentRequest,
+    DocumentResponse,
+    DocumentListResponse,
+)
 from ..schemas.user import MemberResponse
 from ..models import Project, ProjectUser, Document, Role, User
 from ..core.security import get_user_and_session
-from ..dependencies import get_project_for_user_permissions, get_project_for_owner_permissions, get_document_for_user_permissions, get_document_for_owner_permissions
+from ..dependencies import (
+    get_project_for_user_permissions,
+    get_project_for_owner_permissions,
+    get_document_for_user_permissions,
+)
 
 
 router = APIRouter(tags=["projects"])
 
 
 # Create new project
-@router.post("/projects", response_model=ProjectInfoResponse, status_code=status.HTTP_201_CREATED)
-def create_project(project: Annotated[ProjectBase, Body()], session_and_user: tuple[User, SessionDep] = Depends(get_user_and_session)) -> Project:
+@router.post(
+    "/projects", response_model=ProjectInfoResponse, status_code=status.HTTP_201_CREATED
+)
+def create_project(
+    project: Annotated[ProjectBase, Body()],
+    session_and_user: tuple[User, SessionDep] = Depends(get_user_and_session),
+) -> Project:
     current_user, session = session_and_user
 
-    project_db = Project(name=project.name, description=project.description, owner_id=current_user.id)
-    project_user_db = ProjectUser(user_id=current_user.id, project_id=project_db.id, role=Role.OWNER)
+    project_db = Project(
+        name=project.name, description=project.description, owner_id=current_user.id
+    )
+    project_user_db = ProjectUser(
+        user_id=current_user.id, project_id=project_db.id, role=Role.OWNER
+    )
 
     session.add(project_db)
     session.add(project_user_db)
 
-    commit_or_409(session, "Project with that name already exists.", extract_details=True)
+    commit_or_409(
+        session, "Project with that name already exists.", extract_details=True
+    )
 
     session.refresh(project_db)
     return project_db
 
+
 # List all projects that a user has access to
-@router.get("/projects", response_model=ProjectsListResponse, status_code=status.HTTP_200_OK)
-def list_all_projects(session_and_user: tuple[User, SessionDep] = Depends(get_user_and_session)):
+@router.get(
+    "/projects",
+    response_model=list[ProjectListItemResponse],
+    status_code=status.HTTP_200_OK,
+)
+def list_all_projects(
+    session_and_user: tuple[User, SessionDep] = Depends(get_user_and_session),
+) -> list[ProjectListItemResponse]:
     current_user, session = session_and_user
 
-    statement = select(Project).join(ProjectUser).where(ProjectUser.user_id == current_user.id) # Select all projects that user's id corresponds to user's id from projectuser table 
+    statement = (
+        select(Project).join(ProjectUser).where(ProjectUser.user_id == current_user.id)
+    )  # Select all projects that user's id corresponds to user's id from projectuser table
     projects_list = session.exec(statement).all()
 
-    return ProjectsListResponse(projects=projects_list)
+    return projects_list
+
 
 # Return project's full details (members + documents)
-@router.get("/projects/{project_id}", response_model=ProjectDetailResponse, status_code=status.HTTP_200_OK)
-def get_project_details(project_and_session: tuple[Project, SessionDep] = Depends(get_project_for_user_permissions)) -> ProjectDetailResponse:
-    project, session = project_and_session # At this point user is authenticated and authorized
+@router.get(
+    "/projects/{project_id}",
+    response_model=ProjectDetailResponse,
+    status_code=status.HTTP_200_OK,
+)
+def get_project_details(
+    project_and_session: tuple[Project, SessionDep] = Depends(
+        get_project_for_user_permissions
+    ),
+) -> ProjectDetailResponse:
+    project, session = (
+        project_and_session  # At this point user is authenticated and authorized
+    )
 
-    members = [MemberResponse(username=pu.user.username, id=pu.user.id, role=pu.role) for pu in project.users]
+    members = [
+        MemberResponse(username=pu.user.username, id=pu.user.id, role=pu.role)
+        for pu in project.users
+    ]
 
     return ProjectDetailResponse(
         id=project.id,
@@ -59,45 +109,79 @@ def get_project_details(project_and_session: tuple[Project, SessionDep] = Depend
         documents=project.documents,
     )
 
+
 # Update project details (partial update)
-@router.patch("/projects/{project_id}", response_model=ProjectInfoResponse, status_code=status.HTTP_200_OK)
-def update_project_details(project: Annotated[ProjectUpdateRequest, Body()], project_and_session: tuple[Project, SessionDep] = Depends(get_project_for_user_permissions)):
+@router.patch(
+    "/projects/{project_id}",
+    response_model=ProjectInfoResponse,
+    status_code=status.HTTP_200_OK,
+)
+def update_project_details(
+    project: Annotated[ProjectUpdateRequest, Body()],
+    project_and_session: tuple[Project, SessionDep] = Depends(
+        get_project_for_user_permissions
+    ),
+):
     project_db, session = project_and_session
 
     project_data = project.model_dump(exclude_unset=True)
     project_db.sqlmodel_update(project_data)
 
     session.add(project_db)
-    commit_or_409(session, "Project with that name already exists.", extract_details=True)
+    commit_or_409(
+        session, "Project with that name already exists.", extract_details=True
+    )
     session.refresh(project_db)
 
     return project_db
 
+
 # Delete project (owner only)
 @router.delete("/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_project(project_and_session: tuple[Project, SessionDep] = Depends(get_project_for_owner_permissions)):
+def delete_project(
+    project_and_session: tuple[Project, SessionDep] = Depends(
+        get_project_for_owner_permissions
+    ),
+):
     project, session = project_and_session
 
     session.delete(project)
     session.commit()
 
-    return # HTTP_204_NO_CONTENT
-
-
-
-
+    return  # HTTP_204_NO_CONTENT
 
 
 # List project members
-@router.get("/projects/{project_id}/members", response_model=list[MemberResponse], status_code=status.HTTP_200_OK)
-def get_project_members(project_and_session: tuple[Project, SessionDep] = Depends(get_project_for_user_permissions)):
+@router.get(
+    "/projects/{project_id}/members",
+    response_model=list[MemberResponse],
+    status_code=status.HTTP_200_OK,
+)
+def get_project_members(
+    project_and_session: tuple[Project, SessionDep] = Depends(
+        get_project_for_user_permissions
+    ),
+) -> list[MemberResponse]:
     project, session = project_and_session
 
-    return [MemberResponse(id=pu.user.id, username=pu.user.username, role=pu.role) for pu in project.users]
+    return [
+        MemberResponse(id=pu.user.id, username=pu.user.username, role=pu.role)
+        for pu in project.users
+    ]
+
 
 # Add members to project (owner only)
-@router.post("/projects/{project_id}/members", response_model=list[MemberResponse], status_code=status.HTTP_201_CREATED)
-def add_members_to_project(members: Annotated[MembersAddRequest, Body()], project_and_session: tuple[Project, SessionDep] = Depends(get_project_for_owner_permissions)):
+@router.post(
+    "/projects/{project_id}/members",
+    response_model=list[MemberResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+def add_members_to_project(
+    members: Annotated[MembersAddRequest, Body()],
+    project_and_session: tuple[Project, SessionDep] = Depends(
+        get_project_for_owner_permissions
+    ),
+):
     project, session = project_and_session
 
     # Disable autoflush to prevent premature INSERT before all usernames are resolved
@@ -111,35 +195,52 @@ def add_members_to_project(members: Annotated[MembersAddRequest, Body()], projec
 
             # Skip users that are already members of this project
             if query_user.id in existing_member_ids:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail=f"User '{clean_username}' is already a member of this project."
-                )
+                continue
 
-            project_user_db = ProjectUser(user_id=query_user.id, project_id=project.id, role=Role.USER)
+            project_user_db = ProjectUser(
+                user_id=query_user.id, project_id=project.id, role=Role.USER
+            )
             session.add(project_user_db)
 
     commit_or_409(session, "One or more users already have access to this project.")
     session.refresh(project)
 
-    return [MemberResponse(id=pu.user.id, username=pu.user.username, role=pu.role) for pu in project.users]
+    return [
+        MemberResponse(id=pu.user.id, username=pu.user.username, role=pu.role)
+        for pu in project.users
+    ]
 
 
 # Remove a member from project (owner only)
-@router.delete("/projects/{project_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def remove_member_from_project(user_id: Annotated[UUID, Path()], project_and_session: tuple[Project, SessionDep] = Depends(get_project_for_owner_permissions)):
+@router.delete(
+    "/projects/{project_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+def remove_member_from_project(
+    user_id: Annotated[UUID, Path()],
+    project_and_session: tuple[Project, SessionDep] = Depends(
+        get_project_for_owner_permissions
+    ),
+):
     project, session = project_and_session
 
-    statement = select(ProjectUser).where(ProjectUser.project_id == project.id, ProjectUser.user_id == user_id)
+    statement = select(ProjectUser).where(
+        ProjectUser.project_id == project.id, ProjectUser.user_id == user_id
+    )
     project_user = session.exec(statement).one_or_none()
 
     # Here validate if target user is already a member of an project
     if not project_user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User is not a member of this project.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User is not a member of this project.",
+        )
 
     # Here validate if target user is project owner so that owner doesn't remove themself from project
     if project_user.role == Role.OWNER:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot remove the project owner.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot remove the project owner.",
+        )
 
     session.delete(project_user)
     session.commit()
@@ -147,57 +248,114 @@ def remove_member_from_project(user_id: Annotated[UUID, Path()], project_and_ses
     return
 
 
-
-
-
-
 # List all documents for a project
-@router.get("/projects/{project_id}/documents", response_model=DocumentListResponse, status_code=status.HTTP_200_OK)
-def get_project_documents(project_and_session: tuple[Project, SessionDep] = Depends(get_project_for_user_permissions)):
+@router.get(
+    "/projects/{project_id}/documents",
+    response_model=DocumentListResponse,
+    status_code=status.HTTP_200_OK,
+)
+def get_project_documents(
+    project_and_session: tuple[Project, SessionDep] = Depends(
+        get_project_for_user_permissions
+    ),
+):
     project, session = project_and_session
 
-    return DocumentListResponse(documents=project.documents, count=len(project.documents))
+    return DocumentListResponse(
+        documents=project.documents, count=len(project.documents)
+    )
+
 
 # Upload document(s) for a specific project
-@router.post("/projects/{project_id}/documents", response_model=DocumentListResponse, status_code=status.HTTP_201_CREATED)
-def upload_documents(documents: Annotated[list[DocumentBase], Body(min_length=1)], project_and_session: tuple[Project, SessionDep] = Depends(get_project_for_user_permissions)):
+@router.post(
+    "/projects/{project_id}/documents",
+    response_model=DocumentListResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def upload_documents(
+    documents: Annotated[list[DocumentBase], Body(min_length=1)],
+    project_and_session: tuple[Project, SessionDep] = Depends(
+        get_project_for_user_permissions
+    ),
+):
     project, session = project_and_session
 
-    documents_db = [Document(name=doc.name, size=doc.size, storage_key=doc.storage_key, project_id=project.id) for doc in documents]
+    documents_db = [
+        Document(
+            name=doc.name,
+            size=doc.size,
+            storage_key=doc.storage_key,
+            project_id=project.id,
+        )
+        for doc in documents
+    ]
 
     session.add_all(documents_db)
-    commit_or_409(session, "Document with that name already exists.", extract_details=True)
+    commit_or_409(
+        session, "Document with that name already exists.", extract_details=True
+    )
     session.refresh(project)
 
-    return DocumentListResponse(documents=project.documents, count=len(project.documents))
+    return DocumentListResponse(
+        documents=project.documents, count=len(project.documents)
+    )
+
 
 # Get/download a specific document
-@router.get("/projects/{project_id}/documents/{document_id}", response_model=DocumentResponse, status_code=status.HTTP_200_OK)
-def get_document(document_and_session: tuple[Document, SessionDep] = Depends(get_document_for_user_permissions)):
+@router.get(
+    "/projects/{project_id}/documents/{document_id}",
+    response_model=DocumentResponse,
+    status_code=status.HTTP_200_OK,
+)
+def get_document(
+    document_and_session: tuple[Document, SessionDep] = Depends(
+        get_document_for_user_permissions
+    ),
+):
     document, session = document_and_session
 
     return document
 
+
 # Update document metadata (partial update)
-@router.patch("/projects/{project_id}/documents/{document_id}", response_model=DocumentResponse, status_code=status.HTTP_200_OK)
-def update_document(document_update: Annotated[DocumentRequest, Body()], document_and_session: tuple[Document, SessionDep] = Depends(get_document_for_user_permissions)):
+@router.patch(
+    "/projects/{project_id}/documents/{document_id}",
+    response_model=DocumentResponse,
+    status_code=status.HTTP_200_OK,
+)
+def update_document(
+    document_update: Annotated[DocumentRequest, Body()],
+    document_and_session: tuple[Document, SessionDep] = Depends(
+        get_document_for_user_permissions
+    ),
+):
     document_db, session = document_and_session
 
     document_data = document_update.model_dump(exclude_unset=True)
     document_db.sqlmodel_update(document_data)
 
     session.add(document_db)
-    commit_or_409(session, "Document with that name already exists.", extract_details=True)
+    commit_or_409(
+        session, "Document with that name already exists.", extract_details=True
+    )
     session.refresh(document_db)
 
     return document_db
 
+
 # Delete a document
-@router.delete("/projects/{project_id}/documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_document(document_and_session: tuple[Document, SessionDep] = Depends(get_document_for_user_permissions)):
+@router.delete(
+    "/projects/{project_id}/documents/{document_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_document(
+    document_and_session: tuple[Document, SessionDep] = Depends(
+        get_document_for_user_permissions
+    ),
+):
     document, session = document_and_session
 
     session.delete(document)
     session.commit()
 
-    return # HTTP_204_NO_CONTENT
+    return  # HTTP_204_NO_CONTENT
