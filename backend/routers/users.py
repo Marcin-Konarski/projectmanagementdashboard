@@ -1,26 +1,21 @@
 from typing import Annotated, Any
-from fastapi import APIRouter, HTTPException, Depends, Body, status
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, Body, status
 
-from ..dependencies import SessionDep
+from ..db.session import SessionDep
 from ..db.utility import commit_or_409
 from ..core.security import get_password_hash, authenticate_user, get_user_and_session
-from ..schemas.user import UserRequest, UserAuthRequest, UserResponse, Token, TokenData
+from ..schemas.user import UserRequest, UserResponse, Token
 from ..models.user import User
 
 
-router = APIRouter()
-
-# TODO: Unify endpoints reqest data!!
-# TODO: /auth/ takes params in body and /login/ takes params from OAuth2. Decide which one to use and stick to one
+router = APIRouter(prefix="/auth", tags=["users"])
 
 
 # Create user
-@router.post("/auth", response_model=UserResponse, status_code=status.HTTP_201_CREATED, tags=["users"])
-def auth_user(user: Annotated[UserAuthRequest, Body()], session: SessionDep) -> Any:
-    if user.password.get_secret_value() != user.repeat_password.get_secret_value():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Passwords do not match.")
-
+@router.post(
+    "/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+)
+def signup_user(user: Annotated[UserRequest, Body()], session: SessionDep) -> Any:
     hashed_password = get_password_hash(user.password.get_secret_value())
     user_db = User(username=user.username, password=hashed_password)
     session.add(user_db)
@@ -30,48 +25,29 @@ def auth_user(user: Annotated[UserAuthRequest, Body()], session: SessionDep) -> 
     session.refresh(user_db)
     return user_db
 
-# TODO: CONSIDER SENDING THIS JWT TOKEN IN HEADER OR EVEN IN COOKIE!!!
-# TODO: CONSIDER SENDING THIS JWT TOKEN IN HEADER OR EVEN IN COOKIE!!!
 
-# Login into service, validate credentials and return JWT access token
-# @router.post("/login", status_code=status.HTTP_200_OK, tags=["users"])
+# Login via OAuth2 form (used by Swagger UI "Authorize" button)
+# Accepts application/x-www-form-urlencoded
+# @router.post("/login", status_code=status.HTTP_200_OK)
 # def login_user(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep) -> Any:
 #     access_token = authenticate_user(session, form_data.username, form_data.password)
 #     return Token(access_token=access_token, token_type="bearer")
 
-@router.post("/login/", response_model=Token, status_code=status.HTTP_200_OK, tags=["users"])
+
+# Login via JSON body (used by Postman / frontend)
+# Accepts application/json
+@router.post("/login", response_model=Token, status_code=status.HTTP_200_OK)
 def login_user(user: Annotated[UserRequest, Body()], session: SessionDep) -> Any:
-    access_token = authenticate_user(session, user.username, user.password.get_secret_value())
+    access_token = authenticate_user(
+        session, user.username, user.password.get_secret_value()
+    )
     return Token(access_token=access_token, token_type="bearer")
 
+
 # Get informations about currently logged in user
-@router.get("/me/", response_model=UserResponse, status_code=status.HTTP_200_OK, tags=["users"])
-def get_user_info(session_and_user: tuple[User, SessionDep] = Depends(get_user_and_session)) -> Any:
+@router.get("/me", response_model=UserResponse, status_code=status.HTTP_200_OK)
+def get_user_info(
+    session_and_user: tuple[User, SessionDep] = Depends(get_user_and_session),
+) -> Any:
     current_user, session = session_and_user
     return current_user
-
-
-
-
-
-# # Logout from service
-# @router.post("/logout/", status_code=status.HTTP_200_OK, tags=["users"])
-# def logout_user():
-#     raise NotImplementedError
-#     # return
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#! TODO: Add return types so that FastAPI can validate returned data

@@ -9,6 +9,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY environment variable is not set")
 
+
 class Config(BaseSettings):
     app_name: str = "Project management dashboard"
     db_host: str
@@ -19,7 +20,7 @@ class Config(BaseSettings):
 
     @property
     def db_url(self) -> str:
-        return f'postgresql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}'
+        return f"postgresql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
 
 
 config = Config()

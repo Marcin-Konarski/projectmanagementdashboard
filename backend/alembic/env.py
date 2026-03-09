@@ -34,7 +34,7 @@ from sqlmodel import SQLModel
 
 from alembic import context
 
-from models import * # Again importing models to the memory so that Alembic knows which tables/columns exist in order to generate migrations. However here absolute import is required
+from models import *  # noqa: F403 Again importing models to the memory so that Alembic knows which tables/columns exist in order to generate migrations automatically
 from core.config import config as core_config
 
 # this is the Alembic Config object, which provides
@@ -70,7 +70,9 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url", core_config.db_url) # Overriding sqlalchemy.url with value from config.py
+    url = config.get_main_option(
+        "sqlalchemy.url", core_config.db_url
+    )  # Overriding sqlalchemy.url with value from config.py
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -97,9 +99,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

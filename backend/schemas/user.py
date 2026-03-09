@@ -3,6 +3,7 @@ from typing import Annotated
 from pydantic import BaseModel, SecretStr, Field
 
 from ..custom_types import Name
+from ..models.project_user import Role
 
 
 class Token(BaseModel):
@@ -17,18 +18,17 @@ class TokenData(BaseModel):
 class UserBase(BaseModel):
     username: Name
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 
 class UserRequest(UserBase):
-    password: Annotated[SecretStr, Field(min_length=8, max_length=50)] # TODO: Deal with hasing passwords in some way
-
-
-class UserAuthRequest(UserRequest):
-    repeat_password: Annotated[SecretStr, Field(min_length=8, max_length=50)]
+    password: Annotated[SecretStr, Field(min_length=8, max_length=50)]
 
 
 class UserResponse(UserBase):
     id: UUID
+
+
+class MemberResponse(UserBase):
+    id: UUID
+    role: Role
