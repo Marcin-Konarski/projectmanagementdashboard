@@ -136,7 +136,7 @@ class TestCreateProjects:
         assert response.status_code == status.HTTP_409_CONFLICT
         assert (
             response.json()["detail"]
-            == f"Project with name '{fake_project_payload.get("name")}' already exists."
+            == f"Project with name '{fake_project_payload.get('name')}' already exists."
         )
         mock_session.commit.assert_called_once()
         mock_session.rollback.assert_called_once()
@@ -167,7 +167,7 @@ class TestCreateProjects:
         assert response.status_code == status.HTTP_409_CONFLICT
         assert (
             response.json()["detail"]
-            == f"Document with name '{fake_project_with_documents_payload['documents'][0].get("name")}' already exists."
+            == f"Document with name '{fake_project_with_documents_payload['documents'][0].get('name')}' already exists."
         )
         mock_session.commit.assert_called_once()
         mock_session.rollback.assert_called_once()
@@ -756,7 +756,7 @@ class TestUploadDocuments:
         assert response.status_code == status.HTTP_409_CONFLICT
         assert (
             response.json()["detail"]
-            == f"Document with name '{body[0].get("name")}' already exists."
+            == f"Document with name '{body[0].get('name')}' already exists."
         )
         mock_session.add_all.assert_called_once()
         mock_session.commit.assert_called_once()
