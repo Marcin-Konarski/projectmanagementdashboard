@@ -34,6 +34,8 @@ from ..aws_utility.s3_buckets import (
     create_presigned_url_post_operation,
     create_presigned_url_get_operation,
     create_presigned_url_put_operation,
+    delete_object,
+    delete_objects_by_prefix,
 )
 
 
@@ -152,6 +154,8 @@ def delete_project(
     ),
 ):
     project, session = project_and_session
+
+    delete_objects_by_prefix(config.s3_bucket_name, f"{project.id}/")
 
     session.delete(project)
     session.commit()
@@ -416,6 +420,9 @@ def delete_document(
     ),
 ):
     document, session = document_and_session
+
+    object_key = f"{document.project_id}/{document.id}"
+    delete_object(config.s3_bucket_name, object_key)
 
     session.delete(document)
     session.commit()
