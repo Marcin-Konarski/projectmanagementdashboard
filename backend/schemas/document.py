@@ -23,10 +23,6 @@ class DocumentResponseWithURLs(DocumentResponse):
     presigned_url: dict
 
 
-class DocumentUploadResponse(BaseModel):
-    documents: list[DocumentResponseWithURLs]
-
-
 class DocumentListResponse(BaseModel):
     documents: list[DocumentResponse]
     count: int

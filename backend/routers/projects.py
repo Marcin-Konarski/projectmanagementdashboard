@@ -17,7 +17,6 @@ from ..schemas.document import (
     DocumentBase,
     DocumentResponse,
     DocumentResponseWithURLs,
-    DocumentUploadResponse,
     DocumentListResponse,
     PresignedUrlResponse
 )
@@ -51,6 +50,15 @@ def create_project(
     session_and_user: tuple[User, SessionDep] = Depends(get_user_and_session),
 ) -> Project:
     current_user, session = session_and_user
+
+    owned_count = session.exec(
+        select(Project).where(Project.owner_id == current_user.id)
+    ).all()
+    if len(owned_count) >= config.max_projects:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Project limit reached. Maximum allowed: {config.max_projects}.",
+        )
 
     project_db = Project(
         name=project.name, description=project.description, owner_id=current_user.id
@@ -278,50 +286,48 @@ def get_project_documents(
     )
 
 
-# Upload document(s) for a specific project
+# Upload a document for a specific project
 @router.post(
     "/projects/{project_id}/documents",
-    response_model=DocumentUploadResponse,
+    response_model=DocumentResponseWithURLs,
     status_code=status.HTTP_201_CREATED,
 )
-def upload_documents(
-    documents: Annotated[list[DocumentBase], Body(min_length=1)],
+def upload_document(
+    document: Annotated[DocumentBase, Body()],
     project_and_session: tuple[Project, SessionDep] = Depends(
         get_project_for_user_permissions
     ),
 ):
     project, session = project_and_session
 
-    documents_db = [
-        Document(
-            name=doc.name,
-            project_id=project.id,
-            status=DocumentStatus.PENDING
+    if len(project.documents) >= config.max_docs:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Document limit reached. Maximum allowed per project: {config.max_docs}.",
         )
-        for doc in documents
-    ]
 
-    session.add_all(documents_db)
+    document_db = Document(
+        name=document.name,
+        project_id=project.id,
+        status=DocumentStatus.PENDING
+    )
+
+    session.add(document_db)
     commit_or_409(
         session, "Document with that name already exists.", extract_details=True
     )
+    session.refresh(document_db)
 
-    response_documents = []
-    for doc_db in documents_db:
-        session.refresh(doc_db)
-        object_key = f"{project.id}/{doc_db.id}"
-        url = create_presigned_url_post_operation(bucket_name=config.s3_bucket_name, object_name=object_key)
-        response_documents.append(
-            DocumentResponseWithURLs(
-                id=doc_db.id,
-                name=doc_db.name,
-                status=doc_db.status,
-                created_at=doc_db.created_at,
-                presigned_url=url,
-            )
-        )
+    object_key = f"{project.id}/{document_db.id}"
+    url = create_presigned_url_post_operation(bucket_name=config.s3_bucket_name, object_name=object_key)
 
-    return DocumentUploadResponse(documents=response_documents)
+    return DocumentResponseWithURLs(
+        id=document_db.id,
+        name=document_db.name,
+        status=document_db.status,
+        created_at=document_db.created_at,
+        presigned_url=url,
+    )
 
 
 # Get/download a specific document
