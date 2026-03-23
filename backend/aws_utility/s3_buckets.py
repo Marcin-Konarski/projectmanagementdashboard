@@ -1,20 +1,25 @@
+import mimetypes
+
 from .boto_client import s3_client
 from ..core.config import config
 
 
+def _guess_content_type(filename: str) -> str:
+    content_type, _ = mimetypes.guess_type(filename)
+    return content_type or "application/octet-stream"
+
+
 def create_presigned_url_post_operation(
-    bucket_name: str, object_name: str, expiration: int = 600
+    bucket_name: str, object_name: str, filename: str, expiration: int = 600
 ) -> dict:
+    content_type = _guess_content_type(filename)
     response = s3_client.generate_presigned_post(
         Bucket=bucket_name,
         Key=object_name,
+        Fields={"Content-Type": content_type},
         Conditions=[
-            [
-                "content-length-range",
-                0,
-                config.max_file_size,
-            ],  # Define range of allowed file sizes
-            # {"Content-Type": content_type},
+            ["content-length-range", 0, config.max_file_size],
+            {"Content-Type": content_type},
         ],
         ExpiresIn=expiration,
     )
@@ -36,13 +41,15 @@ def create_presigned_url_get_operation(bucket_name, object_name, expiration=600)
 
 
 def create_presigned_url_put_operation(
-    bucket_name: str, object_name: str, expiration: int = 600
+    bucket_name: str, object_name: str, filename: str, expiration: int = 600
 ):
+    content_type = _guess_content_type(filename)
     response = s3_client.generate_presigned_url(
         "put_object",
         Params={
             "Bucket": bucket_name,
             "Key": object_name,
+            "ContentType": content_type,
         },
         ExpiresIn=expiration,
     )

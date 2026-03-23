@@ -318,7 +318,9 @@ def upload_document(
 
     object_key = f"{project.id}/{document_db.id}"
     url = create_presigned_url_post_operation(
-        bucket_name=config.s3_bucket_name, object_name=object_key
+        bucket_name=config.s3_bucket_name,
+        object_name=object_key,
+        filename=document_db.name,
     )
 
     return DocumentResponseWithURLs(
@@ -411,6 +413,7 @@ def update_document_content(
     url = create_presigned_url_put_operation(
         bucket_name=config.s3_bucket_name,
         object_name=object_key,
+        filename=document.name,
     )
 
     return PresignedUrlResponse(url=url)
