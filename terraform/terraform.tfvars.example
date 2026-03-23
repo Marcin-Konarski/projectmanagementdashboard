@@ -1,0 +1,16 @@
+
+project_name = "epam-project-management"
+
+aws_access_key_id     = ""
+aws_secret_access_key = ""
+aws_region            = "us-east-1"
+
+s3_bucket_name = "epam-documents"
+
+docker_image     = "rusxl/epam-project-management:latest"
+backend_replicas = 1
+jwt_secret_key   = "your_super_secret_key_here"
+
+db_name     = "project_db"
+db_user     = "project_user"
+db_password = "admin"
