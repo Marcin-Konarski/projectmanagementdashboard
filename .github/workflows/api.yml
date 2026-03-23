@@ -52,7 +52,7 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
       - uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./backend
           push: true
           tags: rusxl/epam-project-management:latest
           
