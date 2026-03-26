@@ -92,7 +92,7 @@ resource "aws_lambda_function" "upload_confirm" {
 
   environment {
     variables = {
-      API_BASE_URL       = "http://${aws_lb.main.dns_name}"
+      API_BASE_URL       = var.backend_base_url
       API_KEY_SECRET_ARN = aws_secretsmanager_secret.lambda_api_key.arn
     }
   }

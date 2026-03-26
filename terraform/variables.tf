@@ -61,3 +61,13 @@ variable "cors_origins" {
   description = "Comma-separated list of allowed CORS origins"
   type        = string
 }
+
+variable "acm_certificate_arn" {
+  description = "ACM certificate ARN for HTTPS listener on ALB"
+  type        = string
+}
+
+variable "backend_base_url" {
+  description = "Public HTTPS base URL for backend API (must match ACM certificate hostname)"
+  type        = string
+}

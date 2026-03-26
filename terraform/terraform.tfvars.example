@@ -10,7 +10,9 @@ s3_bucket_name = "epam-pm-documents-rusxl"
 docker_image     = "rusxl/epam-project-management:latest"
 backend_replicas = 1
 jwt_secret_key   = "your_super_secret_key_here"
-cors_origins = "localhost:3000"
+cors_origins     = "https://frontend-domain"
+acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+backend_base_url = "https://backend-domain"
 
 db_name     = "project_db"
 db_user     = "project_user"

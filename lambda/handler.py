@@ -66,8 +66,15 @@ def lambda_handler(event, context):
                 body = resp.read().decode("utf-8")
                 print(f"Confirmed upload for document {document_id}: {body}")
         except urllib.error.HTTPError as e:
-            error_body = e.read().decode("utf-8")
+            error_body = e.read().decode("utf-8", errors="replace")
             print(f"API error for document {document_id}: {e.code} {error_body}")
+            raise
+        except urllib.error.URLError as e:
+            # URLError usually has no response body; log the reason for TLS/DNS/connect issues.
+            print(
+                "Connection error for document "
+                f"{document_id}: reason={e.reason!r}, url={url}"
+            )
             raise
 
     return {"statusCode": 200}
