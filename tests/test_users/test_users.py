@@ -13,9 +13,7 @@ from backend.routers.users import get_password_hash
 from backend.core.security import create_access_token
 from backend.core.config import SECRET_KEY, ALGORITHM
 
-sys.path.insert(
-    0, os.path.join(os.path.dirname(__file__), "..", "..")
-)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 
 class TestUserAuth:
@@ -30,7 +28,6 @@ class TestUserAuth:
 
         assert response.status_code == status.HTTP_201_CREATED
         mock_session.add.assert_called_once()
-
 
     def test_user_created_returns_409_when_username_exists(
         self, client: TestClient, mock_session: MagicMock, user_register_payload
@@ -70,11 +67,9 @@ class TestUserLogin:
         assert data["token_type"] == "bearer"
         assert isinstance(data["access_token"], str)
         assert len(data["access_token"]) > 0
-        
+
         # Verify JWT is valid and contains correct user
-        decoded = jwt.decode(
-            data["access_token"], SECRET_KEY, algorithms=[ALGORITHM]
-        )
+        decoded = jwt.decode(data["access_token"], SECRET_KEY, algorithms=[ALGORITHM])
         assert decoded["sub"] == "testuser"
 
     def test_login_returns_401_for_wrong_credentials(
@@ -115,7 +110,9 @@ class TestGetMe:
         real_token = create_access_token(data={"sub": "testuser"})
         mock_session.exec.return_value.one_or_none.return_value = fake_user
 
-        response = client.get("/auth/me", headers={"Authorization": f"Bearer {real_token}"})
+        response = client.get(
+            "/auth/me", headers={"Authorization": f"Bearer {real_token}"}
+        )
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()

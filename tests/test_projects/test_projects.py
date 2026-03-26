@@ -41,7 +41,11 @@ class TestAuthRequired:
             ("post", f"/projects/{PROJECT_ID}/documents", {"name": "docx"}),
             ("get", f"/projects/{PROJECT_ID}/documents/{DOCUMENT_ID}", None),
             ("get", f"/projects/{PROJECT_ID}/documents/{DOCUMENT_ID}/content", None),
-            ("patch", f"/projects/{PROJECT_ID}/documents/{DOCUMENT_ID}", {"name": "docu"}),
+            (
+                "patch",
+                f"/projects/{PROJECT_ID}/documents/{DOCUMENT_ID}",
+                {"name": "docu"},
+            ),
             ("put", f"/projects/{PROJECT_ID}/documents/{DOCUMENT_ID}/content", None),
             ("delete", f"/projects/{PROJECT_ID}/documents/{DOCUMENT_ID}", None),
         ],
@@ -54,10 +58,17 @@ class TestAuthRequired:
         path: str,
         payload: dict | None,
     ):
-        response = getattr(client, method)(path, json=payload) if payload else getattr(client, method)(path)
+        response = (
+            getattr(client, method)(path, json=payload)
+            if payload
+            else getattr(client, method)(path)
+        )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert response.json()["detail"] in {"Not authenticated", "Could not validate credentials."}
+        assert response.json()["detail"] in {
+            "Not authenticated",
+            "Could not validate credentials.",
+        }
         mock_session.commit.assert_not_called()
         mock_session.rollback.assert_not_called()
 
@@ -102,7 +113,9 @@ class TestProjectCreate:
         mock_session: MagicMock,
         fake_project_payload,
     ):
-        mock_session.exec.return_value.all.return_value = [object()] * config.max_projects
+        mock_session.exec.return_value.all.return_value = [
+            object()
+        ] * config.max_projects
 
         response = authenticated_client.post("/projects", json=fake_project_payload)
 
@@ -123,7 +136,9 @@ class TestProjectCreate:
         fake_unique_violation = MagicMock(spec=UniqueViolation)
         fake_unique_violation.diag.constraint_name = "project_name_key"
         fake_unique_violation.diag.message_detail = "(name)=(Test Project)"
-        mock_session.commit.side_effect = IntegrityError("duplicate", {}, fake_unique_violation)
+        mock_session.commit.side_effect = IntegrityError(
+            "duplicate", {}, fake_unique_violation
+        )
 
         response = authenticated_client.post("/projects", json=fake_project_payload)
 
@@ -183,7 +198,10 @@ class TestProjectDetails:
             _member("member2", Role.USER),
         ]
         fake_project.documents = [fake_document]
-        mock_session.exec.return_value.one_or_none.return_value = (fake_project, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_project,
+            fake_project_user,
+        )
 
         response = authenticated_client.get(f"/projects/{fake_project.id}")
 
@@ -223,7 +241,10 @@ class TestProjectUpdate:
         fake_project: Project,
         fake_project_user: ProjectUser,
     ):
-        mock_session.exec.return_value.one_or_none.return_value = (fake_project, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_project,
+            fake_project_user,
+        )
 
         response = authenticated_client.patch(
             f"/projects/{fake_project.id}",
@@ -261,12 +282,17 @@ class TestProjectUpdate:
         fake_project: Project,
         fake_project_user: ProjectUser,
     ):
-        mock_session.exec.return_value.one_or_none.return_value = (fake_project, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_project,
+            fake_project_user,
+        )
 
         fake_unique_violation = MagicMock(spec=UniqueViolation)
         fake_unique_violation.diag.constraint_name = "project_name_key"
         fake_unique_violation.diag.message_detail = "(name)=(UpdatedName)"
-        mock_session.commit.side_effect = IntegrityError("duplicate", {}, fake_unique_violation)
+        mock_session.commit.side_effect = IntegrityError(
+            "duplicate", {}, fake_unique_violation
+        )
 
         response = authenticated_client.patch(
             f"/projects/{fake_project.id}", json={"name": "UpdatedName"}
@@ -285,7 +311,10 @@ class TestProjectUpdate:
         fake_project: Project,
         fake_project_user: ProjectUser,
     ):
-        mock_session.exec.return_value.one_or_none.return_value = (fake_project, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_project,
+            fake_project_user,
+        )
 
         response = authenticated_client.patch(
             f"/projects/{fake_project.id}", json={"name": "xy"}
@@ -303,13 +332,20 @@ class TestProjectDelete:
         fake_project: Project,
         fake_project_user: ProjectUser,
     ):
-        mock_session.exec.return_value.one_or_none.return_value = (fake_project, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_project,
+            fake_project_user,
+        )
 
-        with patch("backend.routers.projects.delete_objects_by_prefix") as delete_prefix:
+        with patch(
+            "backend.routers.projects.delete_objects_by_prefix"
+        ) as delete_prefix:
             response = authenticated_client.delete(f"/projects/{fake_project.id}")
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
-        delete_prefix.assert_called_once_with(config.s3_bucket_name, f"{fake_project.id}/")
+        delete_prefix.assert_called_once_with(
+            config.s3_bucket_name, f"{fake_project.id}/"
+        )
         mock_session.delete.assert_called_once_with(fake_project)
         mock_session.commit.assert_called_once()
         mock_session.rollback.assert_not_called()
@@ -322,7 +358,10 @@ class TestProjectDelete:
         fake_project_user: ProjectUser,
     ):
         fake_project_user.role = Role.USER
-        mock_session.exec.return_value.one_or_none.return_value = (fake_project, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_project,
+            fake_project_user,
+        )
 
         response = authenticated_client.delete(f"/projects/{fake_project.id}")
 
@@ -357,7 +396,10 @@ class TestProjectMembers:
             _member("testuser", Role.OWNER, fake_user.id),
             _member("member2", Role.USER),
         ]
-        mock_session.exec.return_value.one_or_none.return_value = (fake_project, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_project,
+            fake_project_user,
+        )
 
         response = authenticated_client.get(f"/projects/{fake_project.id}/members")
 
@@ -388,7 +430,10 @@ class TestProjectMembers:
         fake_user: MagicMock,
     ):
         fake_project.users = [_member("testuser", Role.OWNER, fake_user.id)]
-        mock_session.exec.return_value.one_or_none.return_value = (fake_project, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_project,
+            fake_project_user,
+        )
 
         existing_user = MagicMock()
         existing_user.id = fake_user.id
@@ -421,7 +466,10 @@ class TestProjectMembers:
         fake_project_user: ProjectUser,
     ):
         fake_project_user.role = Role.USER
-        mock_session.exec.return_value.one_or_none.return_value = (fake_project, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_project,
+            fake_project_user,
+        )
 
         response = authenticated_client.post(
             f"/projects/{fake_project.id}/members", json={"usernames": ["newuser"]}
@@ -454,12 +502,17 @@ class TestProjectMembers:
         fake_project_user: ProjectUser,
     ):
         fake_project.users = [_member("owner", Role.OWNER)]
-        mock_session.exec.return_value.one_or_none.return_value = (fake_project, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_project,
+            fake_project_user,
+        )
 
         fake_unique_violation = MagicMock(spec=UniqueViolation)
         fake_unique_violation.diag.constraint_name = "project_user_pkey"
         fake_unique_violation.diag.message_detail = "(user_id,project_id)=(x,y)"
-        mock_session.commit.side_effect = IntegrityError("duplicate", {}, fake_unique_violation)
+        mock_session.commit.side_effect = IntegrityError(
+            "duplicate", {}, fake_unique_violation
+        )
 
         with patch("backend.routers.projects.get_user_by_username") as get_user:
             user = MagicMock()
@@ -470,7 +523,10 @@ class TestProjectMembers:
             )
 
         assert response.status_code == status.HTTP_409_CONFLICT
-        assert response.json()["detail"] == "One or more users already have access to this project."
+        assert (
+            response.json()["detail"]
+            == "One or more users already have access to this project."
+        )
         mock_session.add.assert_called_once()
         mock_session.commit.assert_called_once()
         mock_session.rollback.assert_called_once()
@@ -482,7 +538,10 @@ class TestProjectMembers:
         fake_project: Project,
         fake_project_user: ProjectUser,
     ):
-        mock_session.exec.return_value.one_or_none.return_value = (fake_project, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_project,
+            fake_project_user,
+        )
 
         response = authenticated_client.post(
             f"/projects/{fake_project.id}/members", json={"usernames": "not-a-list"}
@@ -498,7 +557,9 @@ class TestProjectMembers:
         fake_project: Project,
         fake_project_user: ProjectUser,
     ):
-        removable = ProjectUser(user_id=uuid4(), project_id=fake_project.id, role=Role.USER)
+        removable = ProjectUser(
+            user_id=uuid4(), project_id=fake_project.id, role=Role.USER
+        )
         mock_session.exec.return_value.one_or_none.side_effect = [
             (fake_project, fake_project_user),
             removable,
@@ -541,7 +602,9 @@ class TestProjectMembers:
         fake_project: Project,
         fake_project_user: ProjectUser,
     ):
-        owner_target = ProjectUser(user_id=uuid4(), project_id=fake_project.id, role=Role.OWNER)
+        owner_target = ProjectUser(
+            user_id=uuid4(), project_id=fake_project.id, role=Role.OWNER
+        )
         mock_session.exec.return_value.one_or_none.side_effect = [
             (fake_project, fake_project_user),
             owner_target,
@@ -564,7 +627,10 @@ class TestProjectMembers:
         fake_project_user: ProjectUser,
     ):
         fake_project_user.role = Role.USER
-        mock_session.exec.return_value.one_or_none.return_value = (fake_project, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_project,
+            fake_project_user,
+        )
 
         response = authenticated_client.delete(
             f"/projects/{fake_project.id}/members/{uuid4()}"
@@ -586,7 +652,10 @@ class TestProjectDocuments:
         fake_document: Document,
     ):
         fake_project.documents = [fake_document]
-        mock_session.exec.return_value.one_or_none.return_value = (fake_project, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_project,
+            fake_project_user,
+        )
 
         response = authenticated_client.get(f"/projects/{fake_project.id}/documents")
 
@@ -615,7 +684,10 @@ class TestProjectDocuments:
         fake_project_user: ProjectUser,
     ):
         fake_project.documents = []
-        mock_session.exec.return_value.one_or_none.return_value = (fake_project, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_project,
+            fake_project_user,
+        )
 
         with patch(
             "backend.routers.projects.create_presigned_url_post_operation",
@@ -646,9 +718,13 @@ class TestProjectDocuments:
         fake_project_user: ProjectUser,
     ):
         fake_project.documents = [
-            Document(name=f"doc-{i}", project_id=fake_project.id) for i in range(config.max_docs)
+            Document(name=f"doc-{i}", project_id=fake_project.id)
+            for i in range(config.max_docs)
         ]
-        mock_session.exec.return_value.one_or_none.return_value = (fake_project, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_project,
+            fake_project_user,
+        )
 
         response = authenticated_client.post(
             f"/projects/{fake_project.id}/documents", json={"name": "doc-limit"}
@@ -667,12 +743,17 @@ class TestProjectDocuments:
         fake_project_user: ProjectUser,
     ):
         fake_project.documents = []
-        mock_session.exec.return_value.one_or_none.return_value = (fake_project, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_project,
+            fake_project_user,
+        )
 
         fake_unique_violation = MagicMock(spec=UniqueViolation)
         fake_unique_violation.diag.constraint_name = "document_name_key"
         fake_unique_violation.diag.message_detail = "(name)=(doc123)"
-        mock_session.commit.side_effect = IntegrityError("duplicate", {}, fake_unique_violation)
+        mock_session.commit.side_effect = IntegrityError(
+            "duplicate", {}, fake_unique_violation
+        )
 
         response = authenticated_client.post(
             f"/projects/{fake_project.id}/documents", json={"name": "doc123"}
@@ -706,7 +787,10 @@ class TestProjectDocuments:
         fake_project: Project,
         fake_project_user: ProjectUser,
     ):
-        mock_session.exec.return_value.one_or_none.return_value = (fake_project, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_project,
+            fake_project_user,
+        )
 
         response = authenticated_client.post(
             f"/projects/{fake_project.id}/documents", json={"name": "ab"}
@@ -722,7 +806,10 @@ class TestProjectDocuments:
         fake_document: Document,
         fake_project_user: ProjectUser,
     ):
-        mock_session.exec.return_value.one_or_none.return_value = (fake_document, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_document,
+            fake_project_user,
+        )
 
         response = authenticated_client.get(
             f"/projects/{fake_document.project_id}/documents/{fake_document.id}"
@@ -734,7 +821,10 @@ class TestProjectDocuments:
         assert response.json()["status"] == fake_document.status.value
 
     def test_get_document_404_without_access(
-        self, authenticated_client: TestClient, fake_document: Document, mock_session: MagicMock
+        self,
+        authenticated_client: TestClient,
+        fake_document: Document,
+        mock_session: MagicMock,
     ):
         mock_session.exec.return_value.one_or_none.return_value = None
 
@@ -752,7 +842,10 @@ class TestProjectDocuments:
         fake_document: Document,
         fake_project_user: ProjectUser,
     ):
-        mock_session.exec.return_value.one_or_none.return_value = (fake_document, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_document,
+            fake_project_user,
+        )
 
         with patch(
             "backend.routers.projects.create_presigned_url_get_operation",
@@ -770,7 +863,10 @@ class TestProjectDocuments:
         )
 
     def test_get_document_content_404_without_access(
-        self, authenticated_client: TestClient, fake_document: Document, mock_session: MagicMock
+        self,
+        authenticated_client: TestClient,
+        fake_document: Document,
+        mock_session: MagicMock,
     ):
         mock_session.exec.return_value.one_or_none.return_value = None
 
@@ -788,7 +884,10 @@ class TestProjectDocuments:
         fake_document: Document,
         fake_project_user: ProjectUser,
     ):
-        mock_session.exec.return_value.one_or_none.return_value = (fake_document, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_document,
+            fake_project_user,
+        )
 
         response = authenticated_client.patch(
             f"/projects/{fake_document.project_id}/documents/{fake_document.id}",
@@ -810,12 +909,17 @@ class TestProjectDocuments:
         fake_document: Document,
         fake_project_user: ProjectUser,
     ):
-        mock_session.exec.return_value.one_or_none.return_value = (fake_document, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_document,
+            fake_project_user,
+        )
 
         fake_unique_violation = MagicMock(spec=UniqueViolation)
         fake_unique_violation.diag.constraint_name = "document_name_key"
         fake_unique_violation.diag.message_detail = "(name)=(updated-doc)"
-        mock_session.commit.side_effect = IntegrityError("duplicate", {}, fake_unique_violation)
+        mock_session.commit.side_effect = IntegrityError(
+            "duplicate", {}, fake_unique_violation
+        )
 
         response = authenticated_client.patch(
             f"/projects/{fake_document.project_id}/documents/{fake_document.id}",
@@ -829,7 +933,10 @@ class TestProjectDocuments:
         mock_session.refresh.assert_not_called()
 
     def test_update_document_404_without_access(
-        self, authenticated_client: TestClient, fake_document: Document, mock_session: MagicMock
+        self,
+        authenticated_client: TestClient,
+        fake_document: Document,
+        mock_session: MagicMock,
     ):
         mock_session.exec.return_value.one_or_none.return_value = None
 
@@ -850,7 +957,10 @@ class TestProjectDocuments:
         mock_session: MagicMock,
         fake_project_user: ProjectUser,
     ):
-        mock_session.exec.return_value.one_or_none.return_value = (fake_document, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_document,
+            fake_project_user,
+        )
 
         response = authenticated_client.patch(
             f"/projects/{fake_document.project_id}/documents/{fake_document.id}",
@@ -867,7 +977,10 @@ class TestProjectDocuments:
         fake_document: Document,
         fake_project_user: ProjectUser,
     ):
-        mock_session.exec.return_value.one_or_none.return_value = (fake_document, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_document,
+            fake_project_user,
+        )
 
         with patch(
             "backend.routers.projects.create_presigned_url_put_operation",
@@ -886,7 +999,10 @@ class TestProjectDocuments:
         )
 
     def test_update_document_content_404_without_access(
-        self, authenticated_client: TestClient, fake_document: Document, mock_session: MagicMock
+        self,
+        authenticated_client: TestClient,
+        fake_document: Document,
+        mock_session: MagicMock,
     ):
         mock_session.exec.return_value.one_or_none.return_value = None
 
@@ -904,7 +1020,10 @@ class TestProjectDocuments:
         fake_document: Document,
         fake_project_user: ProjectUser,
     ):
-        mock_session.exec.return_value.one_or_none.return_value = (fake_document, fake_project_user)
+        mock_session.exec.return_value.one_or_none.return_value = (
+            fake_document,
+            fake_project_user,
+        )
 
         with patch("backend.routers.projects.delete_object") as delete_object:
             response = authenticated_client.delete(
@@ -920,7 +1039,10 @@ class TestProjectDocuments:
         mock_session.rollback.assert_not_called()
 
     def test_delete_document_404_without_access(
-        self, authenticated_client: TestClient, fake_document: Document, mock_session: MagicMock
+        self,
+        authenticated_client: TestClient,
+        fake_document: Document,
+        mock_session: MagicMock,
     ):
         mock_session.exec.return_value.one_or_none.return_value = None
 
@@ -944,7 +1066,11 @@ class TestValidationByPath:
             ("get", "/projects/not-a-uuid/members", None),
             ("delete", "/projects/not-a-uuid/members/not-a-uuid", None),
             ("get", "/projects/not-a-uuid/documents/not-a-uuid", None),
-            ("patch", "/projects/not-a-uuid/documents/not-a-uuid", {"name": "valid-name"}),
+            (
+                "patch",
+                "/projects/not-a-uuid/documents/not-a-uuid",
+                {"name": "valid-name"},
+            ),
         ],
     )
     def test_invalid_uuid_returns_422(
