@@ -35,6 +35,7 @@ resource "aws_ecs_task_definition" "backend" {
       { name = "SECRET_KEY", value = var.jwt_secret_key },
       { name = "S3_BUCKET_NAME", value = var.s3_bucket_name },
       { name = "CORS_ORIGINS", value = var.cors_origins },
+      { name = "LAMBDA_API_KEY", value = random_password.lambda_api_key.result },
     ]
 
     logConfiguration = {
