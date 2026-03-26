@@ -23,36 +23,36 @@ jobs:
       - name: Lint check
         run: ruff check .
 
-  # test:
-  #   runs-on: ubuntu-latest
-  #   needs: lint
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-python@v5
-  #       with:
-  #         python-version: "3.12"
-  #     - name: Install dependencies
-  #       run: |
-  #         pip install -r backend/requirements.txt
-  #         pip install -r backend/requirements.dev.txt
-  #     - name: Run tests
-  #       env:
-  #         PYTHONPATH: .
-  #       run: pytest tests/
-
-  build-and-push:
+  test:
     runs-on: ubuntu-latest
-    needs: lint # test
-    if: github.event_name == 'push'
+    needs: lint
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
+      - uses: actions/setup-python@v5
         with:
-          username: rusxl
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-      - uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          push: true
-          tags: rusxl/epam-project-management:latest
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install -r backend/requirements.dev.txt
+      - name: Run tests
+        env:
+          PYTHONPATH: .
+        run: pytest tests/
+
+  # build-and-push:
+  #   runs-on: ubuntu-latest
+  #   needs: lint # test
+  #   if: github.event_name == 'push'
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: docker/login-action@v3
+  #       with:
+  #         username: rusxl
+  #         password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+  #     - uses: docker/build-push-action@v5
+  #       with:
+  #         context: ./backend
+  #         push: true
+  #         tags: rusxl/epam-project-management:latest
           
