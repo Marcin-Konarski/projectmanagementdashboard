@@ -36,6 +36,16 @@ jobs:
   test:
     runs-on: ubuntu-latest
     needs: lint
+    env:
+      SECRET_KEY: ci-test-secret-key
+      LAMBDA_API_KEY: ci-test-lambda-key
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USER: test_user
+      DB_PASSWORD: test_password
+      DB_NAME: test_db
+      S3_BUCKET_NAME: test-bucket
+      CORS_ORIGINS: http://localhost:3000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
