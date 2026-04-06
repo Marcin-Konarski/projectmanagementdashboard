@@ -1,4 +1,4 @@
-FROM python:3.14-slim
+FROM python:3.13-slim
 
 RUN apt-get update
 
@@ -6,15 +6,17 @@ RUN apt-get update
 RUN groupadd app && useradd -m -g app app
 
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-COPY --chown=app:app . .
-RUN chmod +x entrypoint.sh
+COPY pyproject.toml ./
+COPY README.md ./
+COPY --chown=app:app backend ./backend
+RUN pip install --no-cache-dir .
+RUN chmod +x backend/entrypoint.sh
 
 USER app
 
 EXPOSE 8080
 
 ENTRYPOINT ["./entrypoint.sh"]
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "4"]
+ENV PYTHONPATH=/app
+WORKDIR /app/backend
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "4"]

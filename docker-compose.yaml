@@ -1,39 +1,39 @@
 services:
-  # # PostgreSQL database
-  # postgres:
-  #   image: postgres:18.1-bookworm
-  #   container_name: project-postgres
-  #   ports:
-  #     - "5432:5432" #! vulnerability?
-  #   environment:
-  #     POSTGRES_DB: ${DB_NAME}
-  #     POSTGRES_USER: ${DB_USER}
-  #     POSTGRES_PASSWORD: ${DB_PASSWORD}
-  #   volumes:
-  #     - projectpgdata:/var/lib/postgresql/
-  #   healthcheck: # This is neccessary to avoid race condition when backend container tries to run migrations when postgres container did not initialize fully
-  #     test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
-  #     interval: 3s
-  #     timeout: 5s
-  #     retries: 15
-  #   restart: unless-stopped
+  # PostgreSQL database
+  postgres:
+    image: postgres:18.1-bookworm
+    container_name: project-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - projectpgdata:/var/lib/postgresql/
+    healthcheck: # Avoid race condition (backend runs migrations on startup)
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 3s
+      timeout: 5s
+      retries: 15
+    restart: unless-stopped
 
-  # # FastAPI backend
-  # backend:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile
-  #   container_name: project-backend
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy # This checks the condition of postgres container before running migrations
-  #   ports:
-  #     - "8080:8080"
-  #   env_file:
-  #     - .env
-  #   volumes:
-  #     - ./backend:/app/
-  #   restart: unless-stopped
+  # FastAPI backend
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: project-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app/backend
+    restart: unless-stopped
 
   # Next.js frontend
   frontend:
@@ -41,12 +41,13 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: frontend
-    # depends_on:
-    #   - backend
+    depends_on:
+      - backend
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://epam-pm-alb-78798823.us-east-1.elb.amazonaws.com
+      # - NEXT_PUBLIC_API_URL=http://epam-pm-alb-78798823.us-east-1.elb.amazonaws.com
+      - BACKEND_URL=http://backend:8080
     volumes:
       - ./frontend:/app/
       - /app/node_modules

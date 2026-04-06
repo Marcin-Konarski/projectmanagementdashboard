@@ -34,8 +34,8 @@ from sqlmodel import SQLModel
 
 from alembic import context
 
-from models import *  # noqa: F403 Again importing models to the memory so that Alembic knows which tables/columns exist in order to generate migrations automatically
-from core.config import config as core_config
+from backend.models import *  # noqa: F403 Again importing models to the memory so that Alembic knows which tables/columns exist in order to generate migrations automatically
+from backend.core.config import config as core_config
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
